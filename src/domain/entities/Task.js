@@ -1,5 +1,7 @@
 import { EntitySchema } from 'typeorm';
 
+export const TASK_STATUSES = Object.freeze(['Pending', 'Completed']);
+
 export class Task {
   constructor({ id = null, title, description = '', status = 'Pending', createdAt = null } = {}) {
     this.id = id;
@@ -17,11 +19,18 @@ export class Task {
     if (!this.title || typeof this.title !== 'string' || this.title.trim() === '') {
       throw new Error('Task title is required and cannot be empty.');
     }
-
-    const validStatuses = ['Pending', 'Completed'];
-    if (this.status && !validStatuses.includes(this.status)) {
-      throw new Error(`Invalid status. Allowed values are: ${validStatuses.join(', ')}`);
+    if (this.title.trim().length > 255) {
+      throw new Error('Task title cannot exceed 255 characters.');
     }
+    if (typeof this.description !== 'string') {
+      throw new Error('Task description must be a string.');
+    }
+
+    if (!TASK_STATUSES.includes(this.status)) {
+      throw new Error(`Invalid status. Allowed values are: ${TASK_STATUSES.join(', ')}`);
+    }
+
+    return this;
   }
 }
 

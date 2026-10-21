@@ -1,5 +1,5 @@
 import { AppDataSource } from '../database/data-source.js';
-import { Task, TaskSchema } from '../../domain/entities/Task.js';
+import { TaskSchema } from '../../domain/entities/Task.js';
 
 export class TaskRepository {
   constructor(dataSource = AppDataSource) {
@@ -32,8 +32,8 @@ export class TaskRepository {
   }
 
   async findById(id) {
-    const numericId = parseInt(id, 10);
-    if (isNaN(numericId)) {
+    const numericId = Number(id);
+    if (!Number.isSafeInteger(numericId) || numericId < 1) {
       return null;
     }
     return await this.repository.findOneBy({ id: numericId });

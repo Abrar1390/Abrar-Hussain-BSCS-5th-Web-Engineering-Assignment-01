@@ -7,7 +7,7 @@ export class TaskController {
 
   createTask = async (req, res, next) => {
     try {
-      const { title, description } = req.body;
+      const { title, description } = req.body || {};
       const task = await this.createTaskUseCase.execute({ title, description });
 
       return res.status(201).json({
@@ -41,7 +41,7 @@ export class TaskController {
 
       const updatedTask = await this.updateTaskStatusUseCase.execute({
         id,
-        status: status || 'Completed',
+        status,
       });
 
       return res.status(200).json({

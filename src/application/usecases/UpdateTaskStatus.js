@@ -1,21 +1,27 @@
+import { TASK_STATUSES } from '../../domain/entities/Task.js';
+
 export class UpdateTaskStatus {
   constructor(taskRepository) {
     this.taskRepository = taskRepository;
   }
 
-  async execute({ id, status = 'Completed' }) {
-    const numericId = parseInt(id, 10);
-    if (isNaN(numericId)) {
-      const error = new Error('Invalid task ID format. Task ID must be an integer.');
+  async execute({ id, status = 'Completed' } = {}) {
+    if (typeof id !== 'string' && typeof id !== 'number') {
+      const error = new Error('Invalid task ID format. Task ID must be a positive integer.');
       error.statusCode = 400;
       throw error;
     }
 
-    const validStatuses = ['Pending', 'Completed'];
-    const targetStatus = status || 'Completed';
+    const idString = String(id);
+    const numericId = Number(idString);
+    if (!/^\d+$/.test(idString) || !Number.isSafeInteger(numericId) || numericId < 1) {
+      const error = new Error('Invalid task ID format. Task ID must be a positive integer.');
+      error.statusCode = 400;
+      throw error;
+    }
 
-    if (!validStatuses.includes(targetStatus)) {
-      const error = new Error(`Invalid status '${targetStatus}'. Allowed values are: ${validStatuses.join(', ')}`);
+    if (typeof status !== 'string' || !TASK_STATUSES.includes(status)) {
+      const error = new Error(`Invalid status '${status}'. Allowed values are: ${TASK_STATUSES.join(', ')}`);
       error.statusCode = 400;
       throw error;
     }
@@ -27,7 +33,12 @@ export class UpdateTaskStatus {
       throw error;
     }
 
-    const updatedTask = await this.taskRepository.updateStatus(numericId, targetStatus);
+    const updatedTask = await this.taskRepository.updateStatus(numericId, status);
+    if (!updatedTask) {
+      const error = new Error(`Task with ID ${numericId} not found.`);
+      error.statusCode = 404;
+      throw error;
+    }
     return updatedTask;
   }
 }

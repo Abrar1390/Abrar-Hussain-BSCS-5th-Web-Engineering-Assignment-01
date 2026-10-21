@@ -1,11 +1,9 @@
-import pg from 'pg';
+import { Client } from 'pg';
 import { config } from '../src/config/config.js';
 
-const { Client } = pg;
+const quoteIdentifier = (value) => `"${value.replaceAll('"', '""')}"`;
 
 async function setupDatabase() {
-  console.log(`Connecting to PostgreSQL at ${config.database.host}:${config.database.port}...`);
-
   const client = new Client({
     host: config.database.host,
     port: config.database.port,
@@ -14,28 +12,37 @@ async function setupDatabase() {
     database: 'postgres',
   });
 
+  let connected = false;
   try {
+    console.log(`Connecting to PostgreSQL at ${config.database.host}:${config.database.port}...`);
     await client.connect();
-    console.log(' Connected to PostgreSQL server.');
+    connected = true;
+    console.log('Connected to PostgreSQL server.');
 
-    const checkDbRes = await client.query(
-      `SELECT 1 FROM pg_database WHERE datname = $1`,
+    const result = await client.query(
+      'SELECT 1 FROM pg_database WHERE datname = $1',
       [config.database.name]
     );
 
-    if (checkDbRes.rowCount === 0) {
-      console.log(`Database '${config.database.name}' does not exist. Creating...`);
-      await client.query(`CREATE DATABASE "${config.database.name}"`);
-      console.log(` Database '${config.database.name}' created successfully!`);
+    if (result.rowCount === 0) {
+      await client.query(`CREATE DATABASE ${quoteIdentifier(config.database.name)}`);
+      console.log(`Database '${config.database.name}' created successfully.`);
     } else {
-      console.log(` Database '${config.database.name}' already exists.`);
+      console.log(`Database '${config.database.name}' already exists.`);
     }
   } catch (error) {
-    console.error(' Database setup error:', error.message);
-    console.log('\nTip: Make sure PostgreSQL credentials in .env are correct and PostgreSQL service is running.');
+    console.error('Database setup failed:', error.message);
+    process.exitCode = 1;
   } finally {
-    await client.end();
+    if (connected) {
+      try {
+        await client.end();
+      } catch (error) {
+        console.error('Failed to close the PostgreSQL connection:', error.message);
+        process.exitCode = 1;
+      }
+    }
   }
 }
 
-setupDatabase();
+await setupDatabase();
